@@ -4,8 +4,19 @@ import { useApp, useCurrent } from '../store/useApp'
 
 const STATUS = { idle: '', saving: 'Opslaan…', saved: 'Opgeslagen in deze browser', error: 'Niet opgeslagen' } as const
 
+function UndoIcon({ redo = false }: { redo?: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={redo ? { transform: 'scaleX(-1)' } : undefined}>
+      <path d="M9 14L4 9l5-5" />
+      <path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11" />
+    </svg>
+  )
+}
+
 export function TopBar() {
-  const { projects, saveState, openProject, createProject, duplicateProject, deleteProject, renameProject, importProject, showToast } = useApp()
+  const { projects, saveState, openProject, createProject, duplicateProject, deleteProject, renameProject, importProject, showToast, undo, redo } = useApp()
+  const canUndo = useApp((s) => s.past.length > 0)
+  const canRedo = useApp((s) => s.future.length > 0)
   const cur = useCurrent()
   const [menu, setMenu] = useState(false)
   const [armed, setArmed] = useState(false)
@@ -64,6 +75,14 @@ export function TopBar() {
             ))}
           </div>
         )}
+      </div>
+      <div className="flex gap-1">
+        <button className="btn px-2" disabled={!canUndo} onClick={undo} aria-label="Ongedaan maken" title="Ongedaan maken (Ctrl+Z)">
+          <UndoIcon />
+        </button>
+        <button className="btn px-2" disabled={!canRedo} onClick={redo} aria-label="Opnieuw" title="Opnieuw (Ctrl+Shift+Z)">
+          <UndoIcon redo />
+        </button>
       </div>
       <button className="btn" disabled={!cur} onClick={duplicateProject}>
         Dupliceer

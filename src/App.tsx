@@ -9,10 +9,18 @@ import { nestProject } from './lib/nesting'
 import { allParts, boundingBox, cutDims } from './lib/parts'
 import type { Project } from './lib/types'
 import { useApp, useCurrent } from './store/useApp'
+import { SHORTCUTS, useShortcuts } from './useShortcuts'
+import type { ViewPreset } from './components/Viewer3D'
 
 const Viewer3D = lazy(() => import('./components/Viewer3D').then((m) => ({ default: m.Viewer3D })))
 
 type Tab = '3d' | 'cut' | 'nest'
+const VIEWS: [ViewPreset, string][] = [
+  ['iso', '3D'],
+  ['voor', 'Voor'],
+  ['zij', 'Zij'],
+  ['boven', 'Boven'],
+]
 const TABS: [Tab, string][] = [
   ['3d', '3D'],
   ['cut', 'Zaaglijst'],
@@ -77,6 +85,10 @@ export default function App() {
   const [explode, setExplode] = useState(0)
   const [edges, setEdges] = useState(true)
   const [fitKey, setFitKey] = useState(0)
+  const [dims, setDims] = useState(true)
+  const [view, setView] = useState<ViewPreset>('iso')
+  const [help, setHelp] = useState(false)
+  useShortcuts()
 
   useEffect(() => {
     void load()
@@ -113,9 +125,24 @@ export default function App() {
             ) : tab === '3d' ? (
               <>
                 <Suspense fallback={<div className="h-[min(68vh,640px)] min-h-[340px] rounded-t-md bg-scene" />}>
-                  <Viewer3D project={project} selectedId={selectedId} onSelect={select} explode={explode} edges={edges} fitKey={fitKey} />
+                  <Viewer3D project={project} selectedId={selectedId} onSelect={select} explode={explode} edges={edges} dims={dims} view={view} fitKey={fitKey} />
                 </Suspense>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-rule px-3 py-2.5">
+                  <div className="flex overflow-hidden rounded border border-rule" role="group" aria-label="Aanzicht">
+                    {VIEWS.map(([k, label]) => (
+                      <button
+                        key={k}
+                        aria-pressed={view === k}
+                        onClick={() => {
+                          setView(k)
+                          setFitKey((n) => n + 1)
+                        }}
+                        className="border-rule px-2.5 py-1.5 text-[0.82rem] font-semibold not-first:border-l aria-pressed:bg-accent aria-pressed:text-accent-ink"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                   <label htmlFor="explode" className="flex items-center gap-2 text-[0.82rem] text-muted">
                     Uit elkaar
                     <input id="explode" type="range" min={0} max={1} step={0.01} value={explode} onChange={(e) => setExplode(+e.target.value)} className="w-40 accent-accent" />
@@ -124,9 +151,33 @@ export default function App() {
                     <input id="edges" type="checkbox" checked={edges} onChange={(e) => setEdges(e.target.checked)} className="accent-accent" />
                     Lijnen
                   </label>
+                  <label htmlFor="dims" className="flex items-center gap-2 text-[0.82rem] text-muted" title="Maten van de geselecteerde bouwsteen, of van alles als niets geselecteerd is">
+                    <input id="dims" type="checkbox" checked={dims} onChange={(e) => setDims(e.target.checked)} className="accent-accent" />
+                    Maten
+                  </label>
                   <button className="btn" onClick={() => setFitKey((k) => k + 1)}>
                     Passend in beeld
                   </button>
+                  <div className="relative">
+                    <button className="btn" aria-expanded={help} onClick={() => setHelp((h) => !h)}>
+                      Sneltoetsen
+                    </button>
+                    {help && (
+                      <div className="absolute right-0 bottom-[calc(100%+6px)] z-20 w-96 max-w-[calc(100vw-48px)] rounded-md border border-rule bg-sheet p-3 shadow-lg">
+                        <table className="w-full text-[0.8rem]">
+                          <tbody>
+                            {SHORTCUTS.map(([k, d]) => (
+                              <tr key={k}>
+                                <td className="py-0.5 pr-3 font-mono text-[0.75rem] font-bold whitespace-nowrap">{k}</td>
+                                <td className="py-0.5 text-muted">{d}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                        <p className="mt-2 text-[0.75rem] text-muted">In 3D: slepen draait, rechts slepen schuift, scrollen zoomt, tikken selecteert.</p>
+                      </div>
+                    )}
+                  </div>
                   <div className="ml-auto flex flex-wrap gap-x-3 gap-y-1 font-mono text-[0.72rem] text-muted">
                     {thicknesses.map((t) => (
                       <span key={t}>

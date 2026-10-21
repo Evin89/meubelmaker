@@ -1,6 +1,6 @@
-import { Edges, OrbitControls } from '@react-three/drei'
-import { Canvas, useThree, type ThreeEvent } from '@react-three/fiber'
-import { useEffect, useMemo, useState } from 'react'
+import { Edges, Line, OrbitControls } from '@react-three/drei'
+import { Canvas, useFrame, useThree, type ThreeEvent } from '@react-three/fiber'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { mm, woodHsl } from '../lib/format'
@@ -8,6 +8,14 @@ import { boundingBox, cutDims, worldParts } from '../lib/parts'
 import type { Project, WorldPart } from '../lib/types'
 
 const S = 0.001 // 1 eenheid = 1 meter
+
+export type ViewPreset = 'iso' | 'voor' | 'zij' | 'boven'
+const VIEW_DIR: Record<ViewPreset, [number, number, number]> = {
+  iso: [0.75, 0.55, 0.95],
+  voor: [0, 0, 1],
+  zij: [1, 0, 0],
+  boven: [0, 1, 0.0001],
+}
 
 const texCache = new Map<number, THREE.CanvasTexture>()
 function grainTexture(t: number) {
@@ -92,19 +100,90 @@ function PartMesh({
   )
 }
 
-function CameraFit({ project, fitKey }: { project: Project; fitKey: number }) {
+type Box = { lo: [number, number, number]; hi: [number, number, number] }
+
+type DimLine = { from: THREE.Vector3; to: THREE.Vector3; ext: [THREE.Vector3, THREE.Vector3][]; label: string }
+
+/** Maatlijnen langs breedte, diepte en hoogte van een kader. */
+function dimLines(box: Box): DimLine[] {
+  const [x0, y0, z0] = box.lo
+  const [x1, y1, z1] = box.hi
+  const size = Math.max(x1 - x0, y1 - y0, z1 - z0)
+  const o = Math.max(25, size * 0.07)
+  const v = (x: number, y: number, z: number) => new THREE.Vector3(x * S, y * S, z * S)
+  return [
+    {
+      from: v(x0, y0, z1 + o),
+      to: v(x1, y0, z1 + o),
+      ext: [
+        [v(x0, y0, z1), v(x0, y0, z1 + o * 1.25)],
+        [v(x1, y0, z1), v(x1, y0, z1 + o * 1.25)],
+      ],
+      label: mm(x1 - x0),
+    },
+    {
+      from: v(x1 + o, y0, z0),
+      to: v(x1 + o, y0, z1),
+      ext: [
+        [v(x1, y0, z0), v(x1 + o * 1.25, y0, z0)],
+        [v(x1, y0, z1), v(x1 + o * 1.25, y0, z1)],
+      ],
+      label: mm(z1 - z0),
+    },
+    {
+      from: v(x1 + o, y0, z1 + o),
+      to: v(x1 + o, y1, z1 + o),
+      ext: [[v(x1, y1, z1), v(x1 + o * 1.25, y1, z1 + o * 1.25)]],
+      label: mm(y1 - y0),
+    },
+  ]
+}
+
+function DimensionLines({ lines, color }: { lines: DimLine[]; color: string }) {
+  return (
+    <group>
+      {lines.map((l, i) => (
+        <group key={i}>
+          <Line points={[l.from, l.to]} color={color} lineWidth={1.6} depthTest={false} renderOrder={10} />
+          {l.ext.map((e, j) => (
+            <Line key={j} points={e} color={color} lineWidth={1} transparent opacity={0.6} depthTest={false} renderOrder={10} />
+          ))}
+        </group>
+      ))}
+    </group>
+  )
+}
+
+/** Plaatst HTML-labels elk frame op de schermpositie van een 3D-punt. */
+function LabelProjector({ points, refs }: { points: THREE.Vector3[]; refs: React.RefObject<(HTMLSpanElement | null)[]> }) {
+  const tmp = useMemo(() => new THREE.Vector3(), [])
+  useFrame(({ camera, size }) => {
+    points.forEach((p, i) => {
+      const el = refs.current?.[i]
+      if (!el) return
+      tmp.copy(p).project(camera)
+      const hidden = tmp.z > 1
+      el.style.display = hidden ? 'none' : 'block'
+      el.style.transform = `translate(${((tmp.x + 1) / 2) * size.width}px, ${((1 - tmp.y) / 2) * size.height}px) translate(-50%, -50%)`
+    })
+  })
+  return null
+}
+
+function CameraFit({ box, fitKey, view, projectId }: { box: Box | null; fitKey: number; view: ViewPreset; projectId: string }) {
   const { camera, controls } = useThree() as unknown as { camera: THREE.PerspectiveCamera; controls: OrbitControlsImpl | null }
   useEffect(() => {
-    const b = boundingBox(project.items)
-    const c = b ? b.lo.map((v, i) => ((v + b.hi[i]) / 2) * S) : [0, 0.2, 0]
-    const size = b ? Math.max(...b.hi.map((v, i) => v - b.lo[i])) * S : 0.6
-    const d = Math.max(0.6, size * 2.4)
-    camera.position.set(c[0] + d * 0.75, c[1] + d * 0.55, c[2] + d * 0.95)
+    const c = box ? box.lo.map((v, i) => ((v + box.hi[i]) / 2) * S) : [0, 0.2, 0]
+    const size = box ? Math.max(...box.hi.map((v, i) => v - box.lo[i])) * S : 0.6
+    const d = Math.max(0.6, size * (view === 'iso' ? 2.4 : 2.9))
+    const [dx, dy, dz] = VIEW_DIR[view]
+    const len = Math.hypot(dx, dy, dz)
+    camera.position.set(c[0] + (dx / len) * d, c[1] + (dy / len) * d, c[2] + (dz / len) * d)
     controls?.target.set(c[0], c[1], c[2])
     controls?.update()
-    // alleen opnieuw passend maken op verzoek of bij een ander project
+    // alleen opnieuw passend maken op verzoek, bij een ander aanzicht of een ander project
     // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [fitKey, project.id, controls])
+  }, [fitKey, view, controls, projectId])
   return null
 }
 
@@ -114,6 +193,8 @@ export function Viewer3D({
   onSelect,
   explode,
   edges,
+  dims,
+  view,
   fitKey,
 }: {
   project: Project
@@ -121,14 +202,17 @@ export function Viewer3D({
   onSelect: (id: string | null) => void
   explode: number
   edges: boolean
+  dims: boolean
+  view: ViewPreset
   fitKey: number
 }) {
   const colors = useThemeColors()
   const [pick, setPick] = useState<WorldPart | null>(null)
+  const visible = useMemo(() => project.items.filter((i) => !i.hidden), [project.items])
 
   const meshes = useMemo(
     () =>
-      project.items.flatMap((it) => {
+      visible.flatMap((it) => {
         const w = worldParts(it)
         const c = [it.x + w.fx / 2, it.y + w.fy / 2, it.z + w.fz / 2]
         return w.parts.map((q, i) => {
@@ -139,12 +223,16 @@ export function Viewer3D({
           return { key: `${it.id}-${i}`, part: q, off }
         })
       }),
-    [project.items, explode],
+    [visible, explode],
   )
 
-  const b = boundingBox(project.items)
-  const r = b ? Math.max(1, Math.max(...b.hi.map((v, i) => v - b.lo[i])) * S * 1.5) : 1
-  const center = b ? b.lo.map((v, i) => ((v + b.hi[i]) / 2) * S) : [0, 0, 0]
+  const all = boundingBox(visible)
+  const selItem = visible.find((i) => i.id === selectedId)
+  const dimBox = dims && explode === 0 ? (selItem ? boundingBox([selItem]) : all) : null
+  const lines = dimBox ? dimLines(dimBox) : []
+  const labelRefs = useRef<(HTMLSpanElement | null)[]>([])
+  const r = all ? Math.max(1, Math.max(...all.hi.map((v, i) => v - all.lo[i])) * S * 1.5) : 1
+  const center = all ? all.lo.map((v, i) => ((v + all.hi[i]) / 2) * S) : [0, 0, 0]
 
   return (
     <div className="relative h-[min(68vh,640px)] min-h-[340px] overflow-hidden rounded-t-md bg-scene" style={{ touchAction: 'none' }}>
@@ -182,9 +270,23 @@ export function Viewer3D({
             }}
           />
         ))}
-        <OrbitControls makeDefault enableDamping maxPolarAngle={Math.PI * 0.495} />
-        <CameraFit project={project} fitKey={fitKey} />
+        <DimensionLines lines={lines} color={colors.accent} />
+        <LabelProjector points={lines.map((l) => l.from.clone().lerp(l.to, 0.5))} refs={labelRefs} />
+        <OrbitControls makeDefault enableDamping maxPolarAngle={Math.PI / 2} />
+        <CameraFit box={all} fitKey={fitKey} view={view} projectId={project.id} />
       </Canvas>
+      {lines.map((l, i) => (
+        <span
+          key={i}
+          ref={(el) => {
+            labelRefs.current[i] = el
+          }}
+          className="pointer-events-none absolute top-0 left-0 rounded-sm border border-accent bg-sheet px-1 font-mono text-[11px] font-bold whitespace-nowrap text-accent"
+          style={{ display: 'none' }}
+        >
+          {l.label}
+        </span>
+      ))}
       {pick && (
         <div className="pointer-events-none absolute top-2.5 left-2.5 max-w-[calc(100%-20px)] rounded border border-rule bg-sheet px-2.5 py-1.5 text-[0.8rem]">
           <b className="block font-display">
@@ -195,9 +297,9 @@ export function Viewer3D({
           </span>
         </div>
       )}
-      <div className="pointer-events-none absolute right-2.5 bottom-2 text-[0.72rem] text-muted">
-        slepen = draaien · rechts slepen = schuiven · scrollen = zoomen · tik = selecteren
-      </div>
+      {project.items.length > 0 && !visible.length && (
+        <p className="pointer-events-none absolute inset-x-0 top-1/2 text-center text-muted">Alle bouwstenen zijn verborgen. Zet ze aan met het oogje in de lijst.</p>
+      )}
     </div>
   )
 }

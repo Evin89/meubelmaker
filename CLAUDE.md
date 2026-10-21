@@ -25,7 +25,8 @@ Vite + React 19 + TypeScript (strict) + Tailwind v4 (`@tailwindcss/vite`), three
   - `cutlist.ts`: zaaglijst, m² per dikte, CSV
   - `nesting.ts`: plaatindeling in stroken en SVG-export voor laser/CNC
   - `storage.ts`: de `ProjectStore`-interface met een localStorage-implementatie
-- `src/store/useApp.ts`: zustand-store voor projecten, selectie, mutaties en vertraagd opslaan
+- `src/store/useApp.ts`: zustand-store voor projecten, selectie, mutaties, ongedaan maken en vertraagd opslaan
+- `src/useShortcuts.ts`: sneltoetsen (ook de lijst in de app staat hier)
 - `src/components/`: TopBar, SidePanel (bouwstenen, lijst, eigenschappen), Viewer3D (lazy geladen), CutListView, SheetLayoutView
 
 ## Conventies
@@ -37,6 +38,9 @@ Vite + React 19 + TypeScript (strict) + Tailwind v4 (`@tailwindcss/vite`), three
 - UI-tekst is Nederlands, kort en direct, en beschrijft wat de knop doet ("Bovenop zetten", "Losmaken"). Geen emoji.
 - Kleuren komen alleen uit de CSS-tokens in `src/index.css` (licht en donker). Gebruik Tailwind-klassen zoals `bg-sheet`, `text-muted`, `border-rule` en `text-accent`, geen losse kleurwaarden.
 - Houd de domeinlogica vrij van React, zodat hij te testen blijft.
+- Elke wijziging aan een project loopt via `mutate` in de store, zodat ongedaan maken werkt. Geef bij invoer die per toetsaanslag verandert (velden, pijltjes) een `group` mee, bv. `item:<id>:<veld>`. Wijzigingen met dezelfde groep binnen 800 ms worden één stap.
+- `hidden` op een bouwsteen verbergt hem alleen in 3D. Zaaglijst en plaatindeling tellen hem wel mee.
+- 3D-labels zijn gewone DOM-elementen die `LabelProjector` elk frame op hun plek zet. drei `Html` liet met React 19 het eerste label leeg.
 
 ## Bekende beperkingen
 

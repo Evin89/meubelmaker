@@ -145,6 +145,7 @@ export function parseProject(raw: unknown, fallbackName = 'Geïmporteerd'): Proj
       y: num(i.y, 0),
       z: num(i.z, 0),
       rot: i.rot === 90 ? 90 : 0,
+      ...(i.hidden === true ? { hidden: true } : {}),
       p: { ...BLOCKS[type].defaults, ...((i.p as object) ?? {}) },
     } as Item)
   }

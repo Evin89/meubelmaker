@@ -3,7 +3,8 @@
 Ontwerp meubels uit bouwstenen of losse platen en zie meteen wat je moet zagen.
 
 - **Bouwstenen:** bak (op binnenmaat), kast met legplanken en achterwand, blad met rand, en een los paneel. Met **Losmaken** zet je een bouwsteen om in losse panelen die je één voor één aanpast.
-- **3D:** draaien, uit elkaar schuiven, en een onderdeel aantikken voor de naam en maat.
+- **3D:** draaien, uit elkaar schuiven, een onderdeel aantikken voor de naam en maat, maatlijnen, aanzichten (3D, voor, zij, boven) en bouwstenen verbergen.
+- **Bewerken:** ongedaan maken en opnieuw doen, en sneltoetsen voor verplaatsen (pijltjes), dupliceren en verwijderen.
 - **Zaaglijst:** gelijke onderdelen samengevoegd per dikte, met m² netto en met zaagverlies. Te downloaden als CSV.
 - **Plaatindeling:** per dikte een plaatmaat kiezen. Je ziet het aantal platen en de benutting, en kunt een SVG in mm downloaden voor de laser of de CNC.
 - **Sjablonen:** knutselkist, boekenkast, nachtkastje. Projecten kun je importeren en exporteren als JSON.

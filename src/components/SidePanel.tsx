@@ -84,7 +84,7 @@ function derivedText(it: Item) {
 function Editor({ it }: { it: Item }) {
   const { updateItem, removeItem, duplicateItem, stackItem, loosenItem } = useApp()
   const def = BLOCKS[it.type]
-  const setP = (key: string, v: number | string) => updateItem(it.id, (i) => ({ ...i, p: { ...i.p, [key]: v } }) as Item)
+  const setP = (key: string, v: number | string) => updateItem(it.id, (i) => ({ ...i, p: { ...i.p, [key]: v } }) as Item, `item:${it.id}:${key}`)
   const params = it.p as Record<string, number | string>
   return (
     <>
@@ -93,7 +93,7 @@ function Editor({ it }: { it: Item }) {
           <label htmlFor="f-name" className="label">
             Naam
           </label>
-          <input id="f-name" className="input" value={it.name} onChange={(e) => updateItem(it.id, (i) => ({ ...i, name: e.target.value }))} />
+          <input id="f-name" className="input" value={it.name} onChange={(e) => updateItem(it.id, (i) => ({ ...i, name: e.target.value }), `item:${it.id}:name`)} />
         </div>
         {def.fields.map((f) =>
           f.options ? (
@@ -104,9 +104,9 @@ function Editor({ it }: { it: Item }) {
         )}
         <div className="col-span-2 rounded bg-sunk px-2 py-1.5 font-mono text-[0.75rem] text-muted">{derivedText(it)}</div>
         <div className="col-span-2 mt-1 font-mono text-[0.7rem] font-bold tracking-widest text-muted uppercase">Plaats</div>
-        <NumberField id="f-x" label="X (breedte)" value={it.x} onChange={(n) => updateItem(it.id, (i) => ({ ...i, x: n }))} />
-        <NumberField id="f-z" label="Z (diepte)" value={it.z} onChange={(n) => updateItem(it.id, (i) => ({ ...i, z: n }))} />
-        <NumberField id="f-y" label="Y (hoogte)" value={it.y} onChange={(n) => updateItem(it.id, (i) => ({ ...i, y: n }))} />
+        <NumberField id="f-x" label="X (breedte)" value={it.x} onChange={(n) => updateItem(it.id, (i) => ({ ...i, x: n }), `item:${it.id}:x`)} />
+        <NumberField id="f-z" label="Z (diepte)" value={it.z} onChange={(n) => updateItem(it.id, (i) => ({ ...i, z: n }), `item:${it.id}:z`)} />
+        <NumberField id="f-y" label="Y (hoogte)" value={it.y} onChange={(n) => updateItem(it.id, (i) => ({ ...i, y: n }), `item:${it.id}:y`)} />
         <SelectField id="f-rot" label="Draaiing" value={String(it.rot)} options={{ '0': '0°', '90': '90°' }} onChange={(v) => updateItem(it.id, (i) => ({ ...i, rot: v === '90' ? 90 : 0 }))} />
       </div>
       <div className="flex flex-wrap gap-1.5">
@@ -129,9 +129,19 @@ function Editor({ it }: { it: Item }) {
   )
 }
 
+function EyeIcon({ off }: { off: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
+      <circle cx="12" cy="12" r="3" />
+      {off && <path d="M3 3l18 18" />}
+    </svg>
+  )
+}
+
 export function SidePanel() {
   const cur = useCurrent()
-  const { selectedId, select, addItem } = useApp()
+  const { selectedId, select, addItem, toggleHidden } = useApp()
   const sel = cur?.items.find((i) => i.id === selectedId) ?? null
   return (
     <div className="panel grid content-start">
@@ -152,18 +162,31 @@ export function SidePanel() {
           {cur?.items.map((it) => {
             const l = localParts(it)
             return (
-              <button
+              <div
                 key={it.id}
-                aria-current={it.id === selectedId}
-                onClick={() => select(it.id)}
-                className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 rounded border border-transparent px-2 py-1.5 text-left hover:bg-sunk aria-[current=true]:border-accent aria-[current=true]:bg-sunk"
+                className={`flex items-center rounded border ${it.id === selectedId ? 'border-accent bg-sunk' : 'border-transparent hover:bg-sunk'} ${it.hidden ? 'opacity-55' : ''}`}
               >
-                <span className="rounded-sm border border-rule px-1 font-mono text-[0.62rem] font-bold tracking-wider text-muted uppercase">{BLOCKS[it.type].label}</span>
-                <span className="truncate font-semibold">{it.name}</span>
-                <span className="font-mono text-[0.72rem] whitespace-nowrap text-muted">
-                  {mm(l.fx)} × {mm(l.fz)} × {mm(l.fy)}
-                </span>
-              </button>
+                <button
+                  aria-current={it.id === selectedId}
+                  onClick={() => select(it.id)}
+                  className="grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 py-1.5 pl-2 text-left"
+                >
+                  <span className="rounded-sm border border-rule px-1 font-mono text-[0.62rem] font-bold tracking-wider text-muted uppercase">{BLOCKS[it.type].label}</span>
+                  <span className="truncate font-semibold">{it.name}</span>
+                  <span className="font-mono text-[0.72rem] whitespace-nowrap text-muted">
+                    {mm(l.fx)} × {mm(l.fz)} × {mm(l.fy)}
+                  </span>
+                </button>
+                <button
+                  className="grid h-7 w-8 shrink-0 place-items-center rounded text-muted hover:text-ink"
+                  aria-pressed={!it.hidden}
+                  aria-label={it.hidden ? `${it.name} tonen in 3D` : `${it.name} verbergen in 3D`}
+                  title={it.hidden ? 'Tonen in 3D (H)' : 'Verbergen in 3D (H)'}
+                  onClick={() => toggleHidden(it.id)}
+                >
+                  <EyeIcon off={!!it.hidden} />
+                </button>
+              </div>
             )
           })}
         </div>

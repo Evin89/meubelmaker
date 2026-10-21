@@ -49,6 +49,8 @@ type ItemBase = {
   y: number
   z: number
   rot: 0 | 90
+  /** Verborgen in 3D; telt wel mee in zaaglijst en plaatindeling. */
+  hidden?: boolean
 }
 
 export type Item =
