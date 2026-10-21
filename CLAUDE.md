@@ -39,6 +39,7 @@ Vite + React 19 + TypeScript (strict) + Tailwind v4 (`@tailwindcss/vite`), three
 - Kleuren komen alleen uit de CSS-tokens in `src/index.css` (licht en donker). Gebruik Tailwind-klassen zoals `bg-sheet`, `text-muted`, `border-rule` en `text-accent`, geen losse kleurwaarden.
 - Houd de domeinlogica vrij van React, zodat hij te testen blijft.
 - Elke wijziging aan een project loopt via `mutate` in de store, zodat ongedaan maken werkt. Geef bij invoer die per toetsaanslag verandert (velden, pijltjes) een `group` mee, bv. `item:<id>:<veld>`. Wijzigingen met dezelfde groep binnen 800 ms worden één stap.
+- Slepen in 3D (`Viewer3D`, pure rekenregels in `lib/snap.ts`) werkt alleen op de geselecteerde bouwsteen, zodat slepen op een andere bouwsteen het beeld blijft draaien. Elke sleepbeweging heeft een groep `session:drag:…` en is daardoor één ongedaan-maakstap, hoe lang hij ook duurt.
 - `hidden` op een bouwsteen verbergt hem alleen in 3D. Zaaglijst en plaatindeling tellen hem wel mee.
 - 3D-labels zijn gewone DOM-elementen die `LabelProjector` elk frame op hun plek zet. drei `Html` liet met React 19 het eerste label leeg.
 

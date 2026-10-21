@@ -81,7 +81,8 @@ export const useApp = create<AppState>((set, get) => {
     const prev = current()
     if (!prev) return
     const now = Date.now()
-    const coalesce = group !== undefined && lastGroup?.key === group && now - lastGroup.at < COALESCE_MS
+    // Groepen die met 'session:' beginnen (bv. één sleepbeweging) blijven één stap, hoe lang ze ook duren.
+    const coalesce = group !== undefined && lastGroup?.key === group && (group.startsWith('session:') || now - lastGroup.at < COALESCE_MS)
     lastGroup = group !== undefined ? { key: group, at: now } : null
     if (!coalesce) set((s) => ({ past: [...s.past, prev].slice(-HISTORY_LIMIT), future: [] }))
     replaceCurrent({ ...fn(prev), updatedAt: now })

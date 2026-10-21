@@ -79,7 +79,7 @@ function Welcome() {
 }
 
 export default function App() {
-  const { load, loaded, selectedId, select, toast } = useApp()
+  const { load, loaded, selectedId, select, toast, updateItem } = useApp()
   const project = useCurrent()
   const [tab, setTab] = useState<Tab>(() => (localStorage.getItem('meubelmaker.tab') as Tab) || '3d')
   const [explode, setExplode] = useState(0)
@@ -125,7 +125,11 @@ export default function App() {
             ) : tab === '3d' ? (
               <>
                 <Suspense fallback={<div className="h-[min(68vh,640px)] min-h-[340px] rounded-t-md bg-scene" />}>
-                  <Viewer3D project={project} selectedId={selectedId} onSelect={select} explode={explode} edges={edges} dims={dims} view={view} fitKey={fitKey} />
+                  <Viewer3D project={project} selectedId={selectedId} onSelect={select} explode={explode} edges={edges} dims={dims}
+                    view={view}
+                    fitKey={fitKey}
+                    onMove={(id, pos, session) => updateItem(id, (i) => ({ ...i, ...pos }), `session:drag:${id}:${session}`)}
+                  />
                 </Suspense>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-rule px-3 py-2.5">
                   <div className="flex overflow-hidden rounded border border-rule" role="group" aria-label="Aanzicht">
@@ -174,7 +178,7 @@ export default function App() {
                             ))}
                           </tbody>
                         </table>
-                        <p className="mt-2 text-[0.75rem] text-muted">In 3D: slepen draait, rechts slepen schuift, scrollen zoomt, tikken selecteert.</p>
+                        <p className="mt-2 text-[0.75rem] text-muted">In 3D: tik een bouwsteen aan om hem te selecteren en sleep hem dan over de vloer (raster 10 mm). Met Shift sleep je in de hoogte, met Alt per 1 mm. Slepen naast de bouwsteen draait het beeld, rechts slepen schuift, scrollen zoomt.</p>
                       </div>
                     )}
                   </div>

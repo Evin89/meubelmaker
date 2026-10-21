@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import type { OrbitControls as OrbitControlsImpl } from 'three-stdlib'
 import { mm, woodHsl } from '../lib/format'
+import { dragTarget, type DragMode } from '../lib/snap'
 import { boundingBox, cutDims, worldParts } from '../lib/parts'
 import type { Project, WorldPart } from '../lib/types'
 
@@ -69,6 +70,7 @@ function PartMesh({
   edges,
   accent,
   onPick,
+  drag,
 }: {
   part: WorldPart
   offset: [number, number, number]
@@ -76,6 +78,7 @@ function PartMesh({
   edges: boolean
   accent: string
   onPick: (p: WorldPart) => void
+  drag?: DragHandlers
 }) {
   const pos: [number, number, number] = [
     (part.x + part.sx / 2 + offset[0]) * S,
@@ -92,12 +95,36 @@ function PartMesh({
         e.stopPropagation()
         onPick(part)
       }}
+      onPointerDown={drag && ((e) => drag.down(part, e))}
+      onPointerMove={drag?.move}
+      onPointerUp={drag?.up}
+      onPointerOver={drag && (() => selected && drag.hover(true))}
+      onPointerOut={drag && (() => drag.hover(false))}
     >
       <boxGeometry args={[part.sx * S, part.sy * S, part.sz * S]} />
       <meshStandardMaterial map={grainTexture(part.t)} roughness={0.75} emissive={selected ? accent : '#000000'} emissiveIntensity={selected ? 0.18 : 0} />
       {edges && <Edges threshold={20} color="#3a2a18" transparent opacity={0.45} />}
     </mesh>
   )
+}
+
+type DragHandlers = {
+  down: (part: WorldPart, e: ThreeEvent<PointerEvent>) => void
+  move: (e: ThreeEvent<PointerEvent>) => void
+  up: (e: ThreeEvent<PointerEvent>) => void
+  hover: (on: boolean) => void
+}
+
+type DragState = {
+  id: string
+  start: { x: number; y: number; z: number }
+  plane: THREE.Plane
+  origin: THREE.Vector3
+  client: [number, number]
+  mode: DragMode
+  active: boolean
+  last: string
+  session: number
 }
 
 type Box = { lo: [number, number, number]; hi: [number, number, number] }
@@ -196,6 +223,7 @@ export function Viewer3D({
   dims,
   view,
   fitKey,
+  onMove,
 }: {
   project: Project
   selectedId: string | null
@@ -205,6 +233,8 @@ export function Viewer3D({
   dims: boolean
   view: ViewPreset
   fitKey: number
+  /** Nieuwe positie (mm) tijdens slepen van een geselecteerde bouwsteen. */
+  onMove?: (id: string, pos: { x: number; y: number; z: number }, session: number) => void
 }) {
   const colors = useThemeColors()
   const [pick, setPick] = useState<WorldPart | null>(null)
@@ -233,6 +263,63 @@ export function Viewer3D({
   const labelRefs = useRef<(HTMLSpanElement | null)[]>([])
   const r = all ? Math.max(1, Math.max(...all.hi.map((v, i) => v - all.lo[i])) * S * 1.5) : 1
   const center = all ? all.lo.map((v, i) => ((v + all.hi[i]) / 2) * S) : [0, 0, 0]
+
+  // Slepen: alleen de geselecteerde bouwsteen, en niet als hij uit elkaar is geschoven.
+  const controlsRef = useRef<OrbitControlsImpl>(null)
+  const dragRef = useRef<DragState | null>(null)
+  const tmp = useMemo(() => new THREE.Vector3(), [])
+  const setCursor = (c: string) => {
+    document.body.style.cursor = c
+  }
+  const drag: DragHandlers | undefined =
+    onMove && explode === 0
+      ? {
+          down(part, e) {
+            if (e.button !== 0 || part.itemId !== selectedId) return
+            const it = visible.find((i) => i.id === part.itemId)
+            if (!it) return
+            e.stopPropagation()
+            const mode: DragMode = e.shiftKey ? 'hoogte' : 'vlak'
+            const plane = new THREE.Plane()
+            if (mode === 'vlak') plane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 1, 0), e.point)
+            else {
+              const n = new THREE.Vector3()
+              e.camera.getWorldDirection(n)
+              n.y = 0
+              if (n.lengthSq() < 1e-6) n.set(0, 0, 1)
+              plane.setFromNormalAndCoplanarPoint(n.normalize(), e.point)
+            }
+            dragRef.current = { id: it.id, start: { x: it.x, y: it.y, z: it.z }, plane, origin: e.point.clone(), client: [e.clientX, e.clientY], mode, active: false, last: '', session: Date.now() }
+            ;(e.target as unknown as Element).setPointerCapture(e.pointerId)
+            if (controlsRef.current) controlsRef.current.enabled = false
+          },
+          move(e) {
+            const d = dragRef.current
+            if (!d) return
+            if (!d.active && Math.hypot(e.clientX - d.client[0], e.clientY - d.client[1]) < 4) return
+            d.active = true
+            setCursor('grabbing')
+            if (!e.ray.intersectPlane(d.plane, tmp)) return
+            const delta = { x: (tmp.x - d.origin.x) / S, y: (tmp.y - d.origin.y) / S, z: (tmp.z - d.origin.z) / S }
+            const pos = dragTarget(d.start, delta, e.altKey ? 1 : 10, d.mode)
+            const key = `${pos.x}|${pos.y}|${pos.z}`
+            if (key !== d.last) {
+              d.last = key
+              onMove(d.id, pos, d.session)
+            }
+          },
+          up(e) {
+            if (!dragRef.current) return
+            ;(e.target as unknown as Element).releasePointerCapture?.(e.pointerId)
+            dragRef.current = null
+            if (controlsRef.current) controlsRef.current.enabled = true
+            setCursor('')
+          },
+          hover(on) {
+            if (!dragRef.current) setCursor(on ? 'grab' : '')
+          },
+        }
+      : undefined
 
   return (
     <div className="relative h-[min(68vh,640px)] min-h-[340px] overflow-hidden rounded-t-md bg-scene" style={{ touchAction: 'none' }}>
@@ -268,11 +355,12 @@ export function Viewer3D({
               setPick(p)
               onSelect(p.itemId)
             }}
+            drag={drag}
           />
         ))}
         <DimensionLines lines={lines} color={colors.accent} />
         <LabelProjector points={lines.map((l) => l.from.clone().lerp(l.to, 0.5))} refs={labelRefs} />
-        <OrbitControls makeDefault enableDamping maxPolarAngle={Math.PI / 2} />
+        <OrbitControls ref={controlsRef} makeDefault enableDamping maxPolarAngle={Math.PI / 2} />
         <CameraFit box={all} fitKey={fitKey} view={view} projectId={project.id} />
       </Canvas>
       {lines.map((l, i) => (

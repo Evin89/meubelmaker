@@ -49,6 +49,18 @@ describe('ongedaan maken', () => {
     expect(cur().items[0].x).toBe(10)
   })
 
+  it('houdt een sleepsessie één stap, ook als hij lang duurt', () => {
+    const s = useApp.getState()
+    s.addItem(makeItem('bak'))
+    const id = cur().items[0].id
+    for (let i = 1; i <= 5; i++) {
+      s.updateItem(id, (it) => ({ ...it, x: i * 100 }), 'session:drag:1')
+      vi.advanceTimersByTime(2000)
+    }
+    s.undo()
+    expect(cur().items[0].x).toBe(0)
+  })
+
   it('wist de redo-stapel na een nieuwe wijziging', () => {
     const s = useApp.getState()
     s.addItem(makeItem('bak'))

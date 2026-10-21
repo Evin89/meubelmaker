@@ -11,6 +11,9 @@ export const SHORTCUTS: [string, string][] = [
   ['Delete', 'Verwijderen'],
   ['H', 'Verbergen of tonen in 3D'],
   ['Esc', 'Selectie opheffen'],
+  ['Slepen in 3D', 'Geselecteerde bouwsteen verplaatsen (10 mm)'],
+  ['Shift + slepen', 'In de hoogte verplaatsen'],
+  ['Alt + slepen', 'Per 1 mm'],
 ]
 
 /** Sneltoetsen voor de hele app. Werkt niet terwijl je in een veld typt, behalve ongedaan maken. */
