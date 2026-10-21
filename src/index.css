@@ -1,0 +1,96 @@
+@import 'tailwindcss';
+
+/* Kleuren als tokens; de dark-variant volgt het systeem. */
+:root {
+  --paper: #eef1f2;
+  --sheet: #ffffff;
+  --sunk: #f6f8f8;
+  --ink: #1c2830;
+  --muted: #5a6a75;
+  --rule: #d3dbdf;
+  --accent: #1b5fa6;
+  --accent-ink: #ffffff;
+  --danger: #b3372f;
+  --ok: #2f7d5e;
+  --scene: #e4e9eb;
+  --floor: #d3d9dc;
+  --gridline: #b9c3c8;
+  --woodfill: #ead2a6;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: #11171b;
+    --sheet: #182026;
+    --sunk: #141b20;
+    --ink: #e3e9ed;
+    --muted: #93a3ae;
+    --rule: #2c3840;
+    --accent: #6eaaf0;
+    --accent-ink: #0d1418;
+    --danger: #ef7d72;
+    --ok: #6cc39a;
+    --scene: #1a2228;
+    --floor: #202a31;
+    --gridline: #2f3c44;
+    --woodfill: #5e4a31;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-sheet: var(--sheet);
+  --color-sunk: var(--sunk);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-rule: var(--rule);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+  --color-scene: var(--scene);
+  --font-display: 'Archivo', 'Arial Narrow', system-ui, sans-serif;
+  --font-sans: 'Public Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+}
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-stretch: 85%;
+  text-wrap: balance;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@layer components {
+  .btn {
+    @apply rounded border border-rule bg-sunk px-2.5 py-1.5 text-[0.85rem] font-semibold whitespace-nowrap hover:border-muted disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply border-accent bg-accent text-accent-ink hover:border-accent;
+  }
+  .btn-danger {
+    @apply text-danger;
+  }
+  .input {
+    @apply w-full min-w-0 rounded border border-rule bg-sunk px-2 py-1.5;
+  }
+  .label {
+    @apply text-[0.72rem] font-semibold tracking-wide text-muted;
+  }
+  .panel {
+    @apply rounded-md border border-rule bg-sheet;
+  }
+}
