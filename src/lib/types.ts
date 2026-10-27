@@ -23,7 +23,18 @@ export type KastParams = {
   planken: number
   achter: 'geen' | 'ingelegd' | 'opgezet'
   achterT: number
+  /** Inhoud per vak, van onder naar boven. Ontbrekende vakken zijn open. */
+  vakken: Vak[]
+  /** Speling rondom een ladefront */
+  ladeSpeling: number
+  /** Ruimte per kant naast de ladebak (hout-op-hout of geleiders) */
+  ladeGeleider: number
+  ladeZij: number
+  ladeBodem: number
+  ladeFront: number
 }
+
+export type Vak = 'open' | 'lade'
 
 export type BladParams = {
   L: number
@@ -72,6 +83,8 @@ export type Part = {
   sx: number
   sy: number
   sz: number
+  /** Lade-onderdeel: verplaatsing [x, z] in mm als de lade open staat. */
+  slide?: [number, number]
 }
 
 export type WorldPart = Part & { itemId: string; itemName: string }

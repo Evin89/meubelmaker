@@ -2,7 +2,9 @@ import type { BakParams, BladParams, Item, ItemType, KastParams, PaneelParams, P
 
 export const newId = (): string => Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4)
 
-type FieldDef = { key: string; label: string; options?: Record<string, string>; count?: boolean }
+type FieldDef = { key: string; label: string; options?: Record<string, string>; count?: boolean; group?: string; showIf?: (p: Record<string, unknown>) => boolean }
+
+const hasDrawer = (p: Record<string, unknown>) => Array.isArray(p.vakken) && p.vakken.includes('lade')
 
 export const BLOCKS: {
   [K in ItemType]: { label: string; hint: string; defaults: Extract<Item, { type: K }>['p']; fields: FieldDef[] }
@@ -22,8 +24,22 @@ export const BLOCKS: {
   },
   kast: {
     label: 'Kast',
-    hint: 'romp met legplanken',
-    defaults: { B: 800, H: 900, D: 350, t: 18, planken: 2, achter: 'opgezet', achterT: 6 } satisfies KastParams,
+    hint: 'romp met legplanken en lades',
+    defaults: {
+      B: 800,
+      H: 900,
+      D: 350,
+      t: 18,
+      planken: 2,
+      achter: 'opgezet',
+      achterT: 6,
+      vakken: [],
+      ladeSpeling: 2,
+      ladeGeleider: 2,
+      ladeZij: 12,
+      ladeBodem: 9,
+      ladeFront: 18,
+    } satisfies KastParams,
     fields: [
       { key: 'B', label: 'Breedte' },
       { key: 'H', label: 'Hoogte' },
@@ -32,6 +48,11 @@ export const BLOCKS: {
       { key: 'planken', label: 'Legplanken', count: true },
       { key: 'achter', label: 'Achterwand', options: { geen: 'geen', ingelegd: 'ingelegd (tussen zijkanten)', opgezet: 'opgezet (achterop)' } },
       { key: 'achterT', label: 'Dikte achterwand' },
+      { key: 'ladeSpeling', label: 'Speling rond front', group: 'Lades', showIf: hasDrawer },
+      { key: 'ladeGeleider', label: 'Ruimte per kant', group: 'Lades', showIf: hasDrawer },
+      { key: 'ladeFront', label: 'Dikte front', group: 'Lades', showIf: hasDrawer },
+      { key: 'ladeZij', label: 'Dikte ladewanden', group: 'Lades', showIf: hasDrawer },
+      { key: 'ladeBodem', label: 'Dikte ladebodem', group: 'Lades', showIf: hasDrawer },
     ],
   },
   blad: {
@@ -108,14 +129,19 @@ export const TEMPLATES: Template[] = [
   {
     key: 'nacht',
     name: 'Nachtkastje',
-    desc: 'kast met een bak als lade',
+    desc: 'open vak onder, lade boven',
     make: () => ({
       name: 'Nachtkastje',
-      items: [
-        makeItem('kast', { name: 'Romp', p: { B: 450, H: 500, D: 380, planken: 1 } }),
-        makeItem('bak', { name: 'Lade', x: 26, y: 259, z: 28, p: { L: 374, B: 310, H: 120, wand: 12, bodem: 9 } }),
-        makeItem('paneel', { name: 'Ladefront', x: 20, y: 259, z: 362, p: { L: 410, B: 200, t: 18, orient: 'staand-x' } }),
-      ],
+      items: [makeItem('kast', { name: 'Nachtkastje', p: { B: 450, H: 500, D: 380, planken: 1, vakken: ['open', 'lade'] } })],
+    }),
+  },
+  {
+    key: 'ladekast',
+    name: 'Ladekast',
+    desc: '60 × 70 cm, drie lades',
+    make: () => ({
+      name: 'Ladekast',
+      items: [makeItem('kast', { name: 'Ladekast', p: { B: 600, H: 700, D: 450, planken: 2, vakken: ['lade', 'lade', 'lade'] } })],
     }),
   },
 ]

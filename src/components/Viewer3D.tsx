@@ -71,6 +71,7 @@ function PartMesh({
   accent,
   onPick,
   drag,
+  openRef,
 }: {
   part: WorldPart
   offset: [number, number, number]
@@ -79,14 +80,24 @@ function PartMesh({
   accent: string
   onPick: (p: WorldPart) => void
   drag?: DragHandlers
+  /** 0 = lades dicht, 1 = open (geanimeerd) */
+  openRef: React.RefObject<number>
 }) {
   const pos: [number, number, number] = [
     (part.x + part.sx / 2 + offset[0]) * S,
     (part.y + part.sy / 2 + offset[1]) * S,
     (part.z + part.sz / 2 + offset[2]) * S,
   ]
+  const meshRef = useRef<THREE.Mesh>(null)
+  const slide = part.slide
+  useFrame(() => {
+    if (!slide || !meshRef.current) return
+    const k = openRef.current ?? 0
+    meshRef.current.position.set(pos[0] + slide[0] * k * S, pos[1], pos[2] + slide[1] * k * S)
+  })
   return (
     <mesh
+      ref={meshRef}
       position={pos}
       castShadow
       receiveShadow
@@ -106,6 +117,19 @@ function PartMesh({
       {edges && <Edges threshold={20} color="#3a2a18" transparent opacity={0.45} />}
     </mesh>
   )
+}
+
+/** Laat de lades soepel open- en dichtschuiven. */
+function DrawerAnimator({ open, onStep }: { open: boolean; onStep: (v: number) => void }) {
+  const cur = useRef(open ? 1 : 0)
+  useFrame((_, dt) => {
+    const target = open ? 1 : 0
+    if (cur.current === target) return
+    const next = cur.current + (target - cur.current) * Math.min(1, dt * 5)
+    cur.current = Math.abs(next - target) < 0.002 ? target : next
+    onStep(cur.current)
+  })
+  return null
 }
 
 type DragHandlers = {
@@ -224,6 +248,7 @@ export function Viewer3D({
   view,
   fitKey,
   onMove,
+  drawersOpen = false,
 }: {
   project: Project
   selectedId: string | null
@@ -233,6 +258,8 @@ export function Viewer3D({
   dims: boolean
   view: ViewPreset
   fitKey: number
+  /** Lades open tonen */
+  drawersOpen?: boolean
   /** Nieuwe positie (mm) tijdens slepen van een geselecteerde bouwsteen. */
   onMove?: (id: string, pos: { x: number; y: number; z: number }, session: number) => void
 }) {
@@ -266,6 +293,7 @@ export function Viewer3D({
 
   // Slepen: alleen de geselecteerde bouwsteen, en niet als hij uit elkaar is geschoven.
   const controlsRef = useRef<OrbitControlsImpl>(null)
+  const openRef = useRef(drawersOpen ? 1 : 0)
   const dragRef = useRef<DragState | null>(null)
   const tmp = useMemo(() => new THREE.Vector3(), [])
   const setCursor = (c: string) => {
@@ -356,10 +384,17 @@ export function Viewer3D({
               onSelect(p.itemId)
             }}
             drag={drag}
+            openRef={openRef}
           />
         ))}
         <DimensionLines lines={lines} color={colors.accent} />
         <LabelProjector points={lines.map((l) => l.from.clone().lerp(l.to, 0.5))} refs={labelRefs} />
+        <DrawerAnimator
+          open={drawersOpen}
+          onStep={(v) => {
+            openRef.current = v
+          }}
+        />
         <OrbitControls ref={controlsRef} makeDefault enableDamping maxPolarAngle={Math.PI / 2} />
         <CameraFit box={all} fitKey={fitKey} view={view} projectId={project.id} />
       </Canvas>

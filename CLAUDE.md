@@ -23,6 +23,7 @@ Vite + React 19 + TypeScript (strict) + Tailwind v4 (`@tailwindcss/vite`), three
 - `src/lib/` bevat de pure domeinlogica, zonder React of DOM. Alles wat rekent hoort hier en krijgt tests.
   - `types.ts`: `Item` (bouwsteen), `Part` (plaatonderdeel als asgerichte balk), `Project`
   - `parts.ts`: `localParts` zet een bouwsteen om in onderdelen. Ook `cutDims`, `boundingBox`, `stackHeight` (bovenop zetten) en `explodeToPanels` (losmaken)
+  - `drawers.ts`: lades in een kastvak (inliggend front, ladebak met vier wanden en een bodem eronder) en de binnenmaat van de bak
   - `blocks.ts`: definities van de bouwstenen (standaardwaarden, formuliervelden), de sjablonen en `parseProject` voor import
   - `cutlist.ts`: zaaglijst, m² per dikte, CSV
   - `nesting.ts`: plaatindeling in stroken en SVG-export voor laser/CNC
@@ -44,6 +45,7 @@ Vite + React 19 + TypeScript (strict) + Tailwind v4 (`@tailwindcss/vite`), three
 - Houd de domeinlogica vrij van React, zodat hij te testen blijft.
 - Elke wijziging aan een project loopt via `mutate` in de store, zodat ongedaan maken werkt. Geef bij invoer die per toetsaanslag verandert (velden, pijltjes) een `group` mee, bv. `item:<id>:<veld>`. Wijzigingen met dezelfde groep binnen 800 ms worden één stap.
 - Slepen in 3D (`Viewer3D`, pure rekenregels in `lib/snap.ts`) werkt alleen op de geselecteerde bouwsteen, zodat slepen op een andere bouwsteen het beeld blijft draaien. Elke sleepbeweging heeft een groep `session:drag:…` en is daardoor één ongedaan-maakstap, hoe lang hij ook duurt.
+- Lades horen bij een kast: `p.vakken[i]` is `'open'` of `'lade'`, met vak 0 onderaan. `kastOpenings` geeft de vakken als openingen, `drawerParts` maakt er een lade van. Lade-onderdelen hebben `slide` ([x, z] in mm). Viewer3D gebruikt dat voor *Lades open*, en het draait mee met `rot`.
 - `hidden` op een bouwsteen verbergt hem alleen in 3D. Zaaglijst en plaatindeling tellen hem wel mee.
 - De desktopapp laadt `dist/` vanaf schijf. Daarom staat `base: './'` in de Vite-config en komen de lettertypes uit `@fontsource-variable` in plaats van Google Fonts. Laad geen externe bronnen.
 - Viewer3D zit in een `ErrorBoundary`. Zonder WebGL blijft de rest van de app werken.
@@ -61,7 +63,7 @@ Vite + React 19 + TypeScript (strict) + Tailwind v4 (`@tailwindcss/vite`), three
 1. Opslag via Supabase (een `ProjectStore`-implementatie) met login, zodat projecten op elk apparaat beschikbaar zijn
 2. Uitsparingen en gaten in onderdelen (vingergat, handgat, deuvelgaten), ook in de SVG-export
 3. Vingerverbindingen voor lasersnijden en DXF-export voor de CNC
-4. Lade als eigen bouwsteen (met front en speling) en scharnierende deksels
+4. Lades in kasten zijn klaar. Nog te doen: opliggende fronten, vrije vakhoogtes, ladegeleiders met vaste inbouwmaat (bv. 12,5 mm per kant), en scharnierende deksels
 5. Houtnerfrichting per onderdeel en een betere plaatindeling (maxrects)
 6. Een PDF-bouwtekening met aanzichten en maatvoering
 7. Deploy naar Cloudflare Pages

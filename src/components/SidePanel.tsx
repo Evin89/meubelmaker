@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { BLOCKS, makeItem } from '../lib/blocks'
 import { mm, parseNum } from '../lib/format'
-import { localParts } from '../lib/parts'
-import type { Item, ItemType } from '../lib/types'
+import { drawerInner } from '../lib/drawers'
+import { drawerSpec, kastOpenings, localParts } from '../lib/parts'
+import type { Item, ItemType, KastParams, Vak } from '../lib/types'
 import { useApp, useCurrent } from '../store/useApp'
 
 function Section({ title, aside, children }: { title: string; aside?: string; children: React.ReactNode }) {
@@ -65,6 +66,69 @@ function SelectField({ id, label, value, options, onChange }: { id: string; labe
   )
 }
 
+function FieldGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <>
+      <div className="col-span-2 mt-1 font-mono text-[0.7rem] font-bold tracking-widest text-muted uppercase">{title}</div>
+      {children}
+    </>
+  )
+}
+
+/** Per vak kiezen tussen open en lade. Getoond van boven naar onder, zoals je voor de kast staat. */
+function Compartments({ id, p }: { id: string; p: KastParams }) {
+  const updateItem = useApp((s) => s.updateItem)
+  const openings = kastOpenings(p)
+  const vakken = p.vakken ?? []
+  const set = (i: number, v: Vak) =>
+    updateItem(id, (it) => {
+      if (it.type !== 'kast') return it
+      const next = Array.from({ length: openings.length }, (_, k) => (k === i ? v : (vakken[k] ?? 'open')))
+      return { ...it, p: { ...it.p, vakken: next } }
+    })
+  return (
+    <>
+      <div className="col-span-2 mt-1 font-mono text-[0.7rem] font-bold tracking-widest text-muted uppercase">Vakken, van boven naar onder</div>
+      <div className="col-span-2 grid gap-1.5">
+        {openings
+          .map((o, i) => ({ o, i }))
+          .reverse()
+          .map(({ o, i }) => {
+            const v = vakken[i] ?? 'open'
+            const inner = drawerInner(o, drawerSpec(p))
+            const ok = inner.every((n) => n > 0)
+            return (
+              <div key={i} className="flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="text-[0.82rem] font-semibold">
+                    Vak {openings.length - i} <span className="font-mono text-[0.72rem] font-medium text-muted">{mm(o.h)} hoog</span>
+                  </div>
+                  {v === 'lade' && (
+                    <div className={`font-mono text-[0.7rem] ${ok ? 'text-muted' : 'text-danger'}`}>
+                      {ok ? `bak binnen ${inner.map(mm).join(' × ')}` : 'vak te klein voor een lade'}
+                    </div>
+                  )}
+                </div>
+                <div className="flex overflow-hidden rounded border border-rule" role="group" aria-label={`Vak ${openings.length - i}`}>
+                  {(['open', 'lade'] as Vak[]).map((k) => (
+                    <button
+                      key={k}
+                      aria-pressed={v === k}
+                      onClick={() => set(i, k)}
+                      className="border-rule px-2.5 py-1 text-[0.8rem] font-semibold not-first:border-l aria-pressed:bg-accent aria-pressed:text-accent-ink"
+                    >
+                      {k === 'open' ? 'Open' : 'Lade'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+      </div>
+    </>
+  )
+}
+
 function derivedText(it: Item) {
   const l = localParts(it)
   switch (it.type) {
@@ -95,13 +159,25 @@ function Editor({ it }: { it: Item }) {
           </label>
           <input id="f-name" className="input" value={it.name} onChange={(e) => updateItem(it.id, (i) => ({ ...i, name: e.target.value }), `item:${it.id}:name`)} />
         </div>
-        {def.fields.map((f) =>
-          f.options ? (
-            <SelectField key={f.key} id={`f-${f.key}`} label={f.label} value={String(params[f.key])} options={f.options} onChange={(v) => setP(f.key, v)} />
-          ) : (
-            <NumberField key={f.key} id={`f-${f.key}`} label={f.label} value={Number(params[f.key])} unit={!f.count} onChange={(n) => setP(f.key, Math.max(0, n))} />
-          ),
-        )}
+        {def.fields
+          .filter((f) => !f.group && (!f.showIf || f.showIf(params)))
+          .map((f) =>
+            f.options ? (
+              <SelectField key={f.key} id={`f-${f.key}`} label={f.label} value={String(params[f.key])} options={f.options} onChange={(v) => setP(f.key, v)} />
+            ) : (
+              <NumberField key={f.key} id={`f-${f.key}`} label={f.label} value={Number(params[f.key])} unit={!f.count} onChange={(n) => setP(f.key, Math.max(0, n))} />
+            ),
+          )}
+        {it.type === 'kast' && <Compartments id={it.id} p={it.p} />}
+        {[...new Set(def.fields.filter((f) => f.group && (!f.showIf || f.showIf(params))).map((f) => f.group!))].map((g) => (
+          <FieldGroup key={g} title={g}>
+            {def.fields
+              .filter((f) => f.group === g && (!f.showIf || f.showIf(params)))
+              .map((f) => (
+                <NumberField key={f.key} id={`f-${f.key}`} label={f.label} value={Number(params[f.key])} unit={!f.count} onChange={(n) => setP(f.key, Math.max(0, n))} />
+              ))}
+          </FieldGroup>
+        ))}
         <div className="col-span-2 rounded bg-sunk px-2 py-1.5 font-mono text-[0.75rem] text-muted">{derivedText(it)}</div>
         <div className="col-span-2 mt-1 font-mono text-[0.7rem] font-bold tracking-widest text-muted uppercase">Plaats</div>
         <NumberField id="f-x" label="X (breedte)" value={it.x} onChange={(n) => updateItem(it.id, (i) => ({ ...i, x: n }), `item:${it.id}:x`)} />

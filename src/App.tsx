@@ -88,6 +88,7 @@ export default function App() {
   const [edges, setEdges] = useState(true)
   const [fitKey, setFitKey] = useState(0)
   const [dims, setDims] = useState(true)
+  const [drawersOpen, setDrawersOpen] = useState(false)
   const [view, setView] = useState<ViewPreset>('iso')
   const [help, setHelp] = useState(false)
   useShortcuts()
@@ -102,6 +103,7 @@ export default function App() {
   }, [load])
   useEffect(() => localStorage.setItem('meubelmaker.tab', tab), [tab])
 
+  const hasDrawers = !!project?.items.some((i) => i.type === 'kast' && i.p.vakken?.includes('lade'))
   const thicknesses = project ? [...new Set(allParts(project.items).map((q) => q.t))].sort((a, b) => b - a) : []
 
   return (
@@ -143,6 +145,7 @@ export default function App() {
                   <Viewer3D project={project} selectedId={selectedId} onSelect={select} explode={explode} edges={edges} dims={dims}
                     view={view}
                     fitKey={fitKey}
+                    drawersOpen={drawersOpen}
                     onMove={(id, pos, session) => updateItem(id, (i) => ({ ...i, ...pos }), `session:drag:${id}:${session}`)}
                   />
                 </Suspense>
@@ -171,6 +174,12 @@ export default function App() {
                     <input id="edges" type="checkbox" checked={edges} onChange={(e) => setEdges(e.target.checked)} className="accent-accent" />
                     Lijnen
                   </label>
+                  {hasDrawers && (
+                    <label htmlFor="drawers" className="flex items-center gap-2 text-[0.82rem] text-muted">
+                      <input id="drawers" type="checkbox" checked={drawersOpen} onChange={(e) => setDrawersOpen(e.target.checked)} className="accent-accent" />
+                      Lades open
+                    </label>
+                  )}
                   <label htmlFor="dims" className="flex items-center gap-2 text-[0.82rem] text-muted" title="Maten van de geselecteerde bouwsteen, of van alles als niets geselecteerd is">
                     <input id="dims" type="checkbox" checked={dims} onChange={(e) => setDims(e.target.checked)} className="accent-accent" />
                     Maten

@@ -1,4 +1,16 @@
-import type { Footprint, Item, Part, WorldPart } from './types'
+import { drawerParts, type Opening } from './drawers'
+import type { Footprint, Item, KastParams, Part, WorldPart } from './types'
+
+/** De vakken van een kast (van onder naar boven) als openingen in lokale coördinaten. */
+export function kastOpenings(p: KastParams): Opening[] {
+  const ta = p.achter === 'opgezet' ? p.achterT : 0
+  const zd = ta + (p.achter === 'ingelegd' ? p.t : 0)
+  const n = Math.max(0, Math.round(p.planken))
+  const gap = (p.H - 2 * p.t - n * p.t) / (n + 1)
+  return Array.from({ length: n + 1 }, (_, i) => ({ x: p.t, y: p.t + i * (gap + p.t), w: p.B - 2 * p.t, h: gap, zBack: zd, zFront: p.D }))
+}
+
+export const drawerSpec = (p: KastParams) => ({ speling: p.ladeSpeling, geleider: p.ladeGeleider, zij: p.ladeZij, bodem: p.ladeBodem, front: p.ladeFront })
 
 const EPS = 1e-6
 
@@ -44,6 +56,11 @@ export function localParts(it: Item): { parts: Part[] } & Footprint {
       const n = Math.max(0, Math.round(planken))
       const gap = (H - 2 * t - n * t) / (n + 1)
       for (let i = 1; i <= n; i++) add('Legplank', t, t, t + i * gap + (i - 1) * t, zd, B - 2 * t, t, hd)
+      const vakken = it.p.vakken ?? []
+      let nr = 0
+      kastOpenings(it.p).forEach((o, i) => {
+        if (vakken[i] === 'lade') parts.push(...drawerParts(o, drawerSpec(it.p), `Lade ${++nr}`))
+      })
       if (inl) add('Achterwand', t, t, t, ta, B - 2 * t, H - 2 * t, t)
       if (achter === 'opgezet') add('Achterwand', ta, 0, 0, 0, B, H, ta)
       fx = B
@@ -88,6 +105,7 @@ export function localParts(it: Item): { parts: Part[] } & Footprint {
       q.x = nx
       q.z = nz
       ;[q.sx, q.sz] = [q.sz, q.sx]
+      if (q.slide) q.slide = [q.slide[1], -q.slide[0]]
     }
     ;[fx, fz] = [fz, fx]
   }
