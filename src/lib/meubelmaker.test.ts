@@ -112,3 +112,16 @@ describe('import', () => {
     expect(() => parseProject({ foo: 1 })).toThrow()
   })
 })
+
+describe('projectbestand', () => {
+  it('bewaart geen id of bestandspad en leest terug naar hetzelfde ontwerp', async () => {
+    const { serializeProject } = await import('./blocks')
+    const p = { ...newProject('knutsel'), filePath: 'C:\\\\Users\\\\evin\\\\kist.meubel' }
+    const json = serializeProject(p)
+    expect(json).not.toContain('filePath')
+    expect(JSON.parse(json).id).toBeUndefined()
+    const back = parseProject(JSON.parse(json))
+    expect(cutList(back.items).map((r) => [r.t, r.a, r.b, r.count])).toEqual(cutList(p.items).map((r) => [r.t, r.a, r.b, r.count]))
+    expect(back.sheets).toEqual(p.sheets)
+  })
+})

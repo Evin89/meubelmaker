@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { download, m2, mm, parseNum, slug } from '../lib/format'
-import { nestProject, nestToSVG, SHEET_PRESETS, type Sheet } from '../lib/nesting'
+import { m2, mm, parseNum } from '../lib/format'
+import { exportSVG } from '../platform'
+import { nestProject, SHEET_PRESETS, type Sheet } from '../lib/nesting'
 import type { Project } from '../lib/types'
 import { useApp } from '../store/useApp'
 
@@ -51,7 +52,7 @@ export function SheetLayoutView({ project }: { project: Project }) {
             }}
           />
         </div>
-        <button className="btn" onClick={() => download(`${slug(project.name)}-plaatindeling.svg`, nestToSVG(project, groups), 'image/svg+xml')}>
+        <button className="btn" onClick={exportSVG}>
           Download SVG (laser/CNC)
         </button>
       </div>

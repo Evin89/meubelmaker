@@ -1,4 +1,7 @@
 @import 'tailwindcss';
+@import '@fontsource-variable/archivo/wdth.css';
+@import '@fontsource-variable/public-sans';
+@import '@fontsource-variable/jetbrains-mono';
 
 /* Kleuren als tokens; de dark-variant volgt het systeem. */
 :root {
@@ -50,9 +53,9 @@
   --color-danger: var(--danger);
   --color-ok: var(--ok);
   --color-scene: var(--scene);
-  --font-display: 'Archivo', 'Arial Narrow', system-ui, sans-serif;
-  --font-sans: 'Public Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  --font-display: 'Archivo Variable', 'Archivo', 'Arial Narrow', system-ui, sans-serif;
+  --font-sans: 'Public Sans Variable', 'Public Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
 }
 
 body {

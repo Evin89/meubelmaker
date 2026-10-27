@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { makeItem } from '../lib/blocks'
+import { makeItem, newProject } from '../lib/blocks'
 import type { Project } from '../lib/types'
 import { setProjectStore, useApp } from './useApp'
 
@@ -77,5 +77,16 @@ describe('ongedaan maken', () => {
     expect(cur().items[0].hidden).toBe(true)
     s.undo()
     expect(cur().items[0].hidden).toBeFalsy()
+  })
+})
+
+describe('desktopbestanden', () => {
+  it('opent een bestand maar één keer', () => {
+    const s = useApp.getState()
+    const before = useApp.getState().projects.length
+    s.openFromFile(newProject('boek'), '/tmp/kast.meubel')
+    s.openFromFile(newProject('boek'), '/tmp/kast.meubel')
+    expect(useApp.getState().projects.length).toBe(before + 1)
+    expect(cur().filePath).toBe('/tmp/kast.meubel')
   })
 })

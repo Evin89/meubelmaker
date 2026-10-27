@@ -29,6 +29,10 @@ type AppState = {
   renameProject(name: string): void
   setProjectField<K extends 'kerf' | 'waste'>(key: K, value: number): void
   setSheet(t: number, size: [number, number]): void
+  /** Desktop: bestandspad van het huidige project (geen ongedaan-maakstap). */
+  setFilePath(path: string): void
+  /** Desktop: een geopend bestand tonen, of naar het al geopende project met dat pad gaan. */
+  openFromFile(p: Project, path: string): void
 
   undo(): void
   redo(): void
@@ -169,6 +173,20 @@ export const useApp = create<AppState>((set, get) => {
     },
     setSheet(t, size) {
       mutate((p) => ({ ...p, sheets: { ...p.sheets, [String(t)]: size } }))
+    },
+    setFilePath(path) {
+      const p = current()
+      if (p) replaceCurrent({ ...p, filePath: path })
+    },
+    openFromFile(p, path) {
+      const existing = get().projects.find((x) => x.filePath === path)
+      if (existing) {
+        get().openProject(existing.id)
+        get().showToast(`${existing.name} was al open`)
+        return
+      }
+      addNew({ ...p, filePath: path })
+      get().showToast(`${p.name} geopend`)
     },
 
     undo() {

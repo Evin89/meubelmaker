@@ -1,0 +1,31 @@
+name: Desktopapp (Windows)
+
+# Bouwt de Windows-installer en een zip. Download ze onder Actions > deze run > Artifacts.
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+      - run: npm run dist:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Meubelmaker-Windows
+          path: |
+            release/*.exe
+            release/*.zip
+          if-no-files-found: error

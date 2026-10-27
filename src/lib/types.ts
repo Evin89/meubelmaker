@@ -89,4 +89,6 @@ export type Project = {
   sheets: Record<string, [number, number]>
   items: Item[]
   updatedAt: number
+  /** Desktopapp: het .meubel-bestand waarin dit project is opgeslagen. Wordt niet in het bestand zelf bewaard. */
+  filePath?: string
 }

@@ -1,5 +1,6 @@
-import { areaByThickness, cutList, toCSV } from '../lib/cutlist'
-import { download, m2, mm, parseNum, slug } from '../lib/format'
+import { areaByThickness, cutList } from '../lib/cutlist'
+import { m2, mm, parseNum } from '../lib/format'
+import { desktop, exportCSV, exportJSON } from '../platform'
 import type { Project } from '../lib/types'
 import { useApp } from '../store/useApp'
 
@@ -28,18 +29,11 @@ export function CutListView({ project }: { project: Project }) {
             }}
           />
         </div>
-        <button className="btn" onClick={() => download(`${slug(project.name)}-zaaglijst.csv`, toCSV(rows), 'text/csv')}>
+        <button className="btn" onClick={exportCSV}>
           Download CSV
         </button>
-        <button
-          className="btn"
-          onClick={() => {
-            const { id: _id, ...rest } = project
-            void _id
-            download(`${slug(project.name)}.json`, JSON.stringify({ app: 'meubelmaker', version: 1, ...rest }, null, 2), 'application/json')
-          }}
-        >
-          Download project (JSON)
+        <button className="btn" onClick={exportJSON}>
+          {desktop ? 'Project opslaan als…' : 'Download project (JSON)'}
         </button>
       </div>
       <div className="overflow-x-auto rounded border border-rule">

@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { parseProject, TEMPLATES } from '../lib/blocks'
+import { baseName, desktop, openProjectFile, saveProjectFile } from '../platform'
 import { useApp, useCurrent } from '../store/useApp'
 
-const STATUS = { idle: '', saving: 'Opslaan…', saved: 'Opgeslagen in deze browser', error: 'Niet opgeslagen' } as const
+const STATUS = {
+  idle: '',
+  saving: 'Opslaan…',
+  saved: desktop ? 'Automatisch bewaard' : 'Opgeslagen in deze browser',
+  error: 'Niet opgeslagen',
+} as const
 
 function UndoIcon({ redo = false }: { redo?: boolean }) {
   return (
@@ -87,9 +93,20 @@ export function TopBar() {
       <button className="btn" disabled={!cur} onClick={duplicateProject}>
         Dupliceer
       </button>
-      <button className="btn" onClick={() => fileRef.current?.click()}>
-        Importeer JSON
-      </button>
+      {desktop ? (
+        <>
+          <button className="btn" onClick={() => void openProjectFile()} title="Ctrl+O">
+            Openen…
+          </button>
+          <button className="btn" disabled={!cur} onClick={() => void saveProjectFile(false)} title={cur?.filePath ? `Opslaan in ${baseName(cur.filePath)} (Ctrl+S)` : 'Opslaan als .meubel-bestand (Ctrl+S)'}>
+            Opslaan
+          </button>
+        </>
+      ) : (
+        <button className="btn" onClick={() => fileRef.current?.click()}>
+          Importeer JSON
+        </button>
+      )}
       <input
         ref={fileRef}
         type="file"
@@ -118,6 +135,7 @@ export function TopBar() {
         {armed ? 'Echt verwijderen?' : 'Verwijder'}
       </button>
       <span className={`ml-auto font-mono text-[0.75rem] whitespace-nowrap ${saveState === 'saved' ? 'text-ok' : 'text-muted'}`} aria-live="polite">
+        {cur?.filePath ? `${baseName(cur.filePath)} · ` : ''}
         {STATUS[saveState]}
       </span>
     </div>

@@ -9,6 +9,8 @@ Web-app om meubels te ontwerpen uit bouwstenen (bak, kast, blad met rand) of los
 - `npm run typecheck` controleert de types
 - `npm run lint` draait oxlint
 - `npm run build` maakt de productiebuild in `dist/`
+- `npm run desktop` bouwt en start de desktopapp, `npm run desktop:dev` start hem met de dev-server
+- `npm run dist:win` maakt de Windows-installer en de zip in `release/`. GitHub Actions (`.github/workflows/desktop.yml`) doet dit bij elke push naar `main`.
 
 Draai `npm test`, `npm run typecheck` en `npm run lint` voordat je iets oplevert.
 
@@ -27,6 +29,8 @@ Vite + React 19 + TypeScript (strict) + Tailwind v4 (`@tailwindcss/vite`), three
   - `storage.ts`: de `ProjectStore`-interface met een localStorage-implementatie
 - `src/store/useApp.ts`: zustand-store voor projecten, selectie, mutaties, ongedaan maken en vertraagd opslaan
 - `src/useShortcuts.ts`: sneltoetsen (ook de lijst in de app staat hier)
+- `src/platform.ts`: verschil tussen web en desktop. Opslaan en openen van `.meubel`-bestanden, exports en de koppeling met het menu. `desktop` is alleen aanwezig in de Electron-app.
+- `electron/main.cjs` en `electron/preload.cjs`: het Electron-hoofdproces (venster, Nederlands menu, opslaan- en openvensters) en de brug `window.meubelmaker`. Gewone CommonJS, geen buildstap.
 - `src/components/`: TopBar, SidePanel (bouwstenen, lijst, eigenschappen), Viewer3D (lazy geladen), CutListView, SheetLayoutView
 
 ## Conventies
@@ -41,6 +45,9 @@ Vite + React 19 + TypeScript (strict) + Tailwind v4 (`@tailwindcss/vite`), three
 - Elke wijziging aan een project loopt via `mutate` in de store, zodat ongedaan maken werkt. Geef bij invoer die per toetsaanslag verandert (velden, pijltjes) een `group` mee, bv. `item:<id>:<veld>`. Wijzigingen met dezelfde groep binnen 800 ms worden één stap.
 - Slepen in 3D (`Viewer3D`, pure rekenregels in `lib/snap.ts`) werkt alleen op de geselecteerde bouwsteen, zodat slepen op een andere bouwsteen het beeld blijft draaien. Elke sleepbeweging heeft een groep `session:drag:…` en is daardoor één ongedaan-maakstap, hoe lang hij ook duurt.
 - `hidden` op een bouwsteen verbergt hem alleen in 3D. Zaaglijst en plaatindeling tellen hem wel mee.
+- De desktopapp laadt `dist/` vanaf schijf. Daarom staat `base: './'` in de Vite-config en komen de lettertypes uit `@fontsource-variable` in plaats van Google Fonts. Laad geen externe bronnen.
+- Viewer3D zit in een `ErrorBoundary`. Zonder WebGL blijft de rest van de app werken.
+- Desktopfuncties lopen altijd via `src/platform.ts`, met een webvariant ernaast. Roep `window.meubelmaker` niet rechtstreeks aan vanuit componenten.
 - 3D-labels zijn gewone DOM-elementen die `LabelProjector` elk frame op hun plek zet. drei `Html` liet met React 19 het eerste label leeg.
 
 ## Bekende beperkingen

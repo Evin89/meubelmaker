@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import { CutListView } from './components/CutListView'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import { SheetLayoutView } from './components/SheetLayoutView'
 import { SidePanel } from './components/SidePanel'
 import { TopBar } from './components/TopBar'
@@ -10,6 +11,7 @@ import { allParts, boundingBox, cutDims } from './lib/parts'
 import type { Project } from './lib/types'
 import { useApp, useCurrent } from './store/useApp'
 import { SHORTCUTS, useShortcuts } from './useShortcuts'
+import { connectDesktop } from './platform'
 import type { ViewPreset } from './components/Viewer3D'
 
 const Viewer3D = lazy(() => import('./components/Viewer3D').then((m) => ({ default: m.Viewer3D })))
@@ -89,6 +91,11 @@ export default function App() {
   const [view, setView] = useState<ViewPreset>('iso')
   const [help, setHelp] = useState(false)
   useShortcuts()
+  useEffect(connectDesktop, [])
+  const title = project ? `${project.name} · Meubelmaker` : 'Meubelmaker'
+  useEffect(() => {
+    document.title = title
+  }, [title])
 
   useEffect(() => {
     void load()
@@ -124,6 +131,14 @@ export default function App() {
               <Welcome />
             ) : tab === '3d' ? (
               <>
+                <ErrorBoundary
+                  fallback={
+                    <div className="grid h-[min(68vh,640px)] min-h-[340px] place-content-center gap-2 rounded-t-md bg-scene p-6 text-center">
+                      <b className="font-display text-lg">3D kan op deze computer niet worden getoond</b>
+                      <p className="m-0 max-w-[50ch] text-muted">De grafische kaart of het stuurprogramma ondersteunt geen WebGL. Ontwerpen, de zaaglijst en de plaatindeling werken wel.</p>
+                    </div>
+                  }
+                >
                 <Suspense fallback={<div className="h-[min(68vh,640px)] min-h-[340px] rounded-t-md bg-scene" />}>
                   <Viewer3D project={project} selectedId={selectedId} onSelect={select} explode={explode} edges={edges} dims={dims}
                     view={view}
@@ -131,6 +146,7 @@ export default function App() {
                     onMove={(id, pos, session) => updateItem(id, (i) => ({ ...i, ...pos }), `session:drag:${id}:${session}`)}
                   />
                 </Suspense>
+                </ErrorBoundary>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-rule px-3 py-2.5">
                   <div className="flex overflow-hidden rounded border border-rule" role="group" aria-label="Aanzicht">
                     {VIEWS.map(([k, label]) => (

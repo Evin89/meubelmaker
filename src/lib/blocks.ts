@@ -126,6 +126,14 @@ export function newProject(key = 'leeg'): Project {
   return { id: newId(), name: b.name, kerf: 3, waste: 15, sheets: b.sheets ?? {}, items: b.items, updatedAt: Date.now() }
 }
 
+/** Project als JSON voor een .meubel- of .json-bestand, zonder id en bestandspad. */
+export function serializeProject(p: Project): string {
+  const { id: _id, filePath: _path, ...rest } = p
+  void _id
+  void _path
+  return JSON.stringify({ app: 'meubelmaker', version: 1, ...rest }, null, 2)
+}
+
 /** Leest een geïmporteerd JSON-project en vult ontbrekende waarden aan. Gooit een fout bij ongeldige invoer. */
 export function parseProject(raw: unknown, fallbackName = 'Geïmporteerd'): Project {
   if (!raw || typeof raw !== 'object' || !Array.isArray((raw as { items?: unknown }).items)) throw new Error('Geen Meubelmaker-project')
